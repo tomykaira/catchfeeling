@@ -2416,10 +2416,14 @@ app.ws('/', (ws, req) => {
         return;
       }
       players.push(new Player(ws, decoded.name));
-      fanOut(systemMessage(decoded.name + 'さんが入室しました'));
-      if (players.length >= kMinPlayerCount) {
+      sendScoreBoard(decoded.name + 'さんが入室しました');
+      if (players.length < kMinPlayerCount) {
+        fanOut(systemMessage(kMinPlayerCount + '人あつまるまでお待ちください。'));
+      } else if (players.length === kMinPlayerCount) {
         fanOut(systemMessage('最低履行人数があつまりました。'));
         waitChangePainter(0);
+      } else {
+        sendOne(ws, systemMessage('次のゲームから参加してください'));
       }
       break;
     case 'textMessage':
@@ -2442,17 +2446,11 @@ app.ws('/', (ws, req) => {
         let point = Math.round((gameEndTime - Date.now()) / 1000);
         stopGameTimer();
 
-        let msg = '現在の得点:';
-        answerer.point += point;
-        players[painterIndex].point += point;
-        for (let p of players) {
-          msg += ' ' + p.name + 'さん ' + p.point + '点';
-        }
         fanOut(endTimer());
         fanOut(setSubject(currentWord));
         fanOut(systemMessage(answerer.name + ' が正解！「' + currentWord + '」+ ' + point + '点'));
         fanOut(systemMessage('絵を描いた人 ' + answerer.name + ' + ' + point + '点'));
-        fanOut(systemMessage(msg));
+        fanOut(sendScoreBoard(''));
         fanOut(audio('ok'));
         waitChangePainter((painterIndex + 1) % players.length);
       }
@@ -2518,6 +2516,14 @@ function disconnect(ws) {
 function waitChangePainter(nextPainterIndex) {
   fanOut(systemMessage('5秒後に次のゲームが始まります'));
   setTimeout(() => { changePainter(nextPainterIndex); }, 5000);
+}
+
+function sendScoreBoard(prefix) {
+  let msg = prefix + '現在の得点:';
+  for (let p of players) {
+    msg += ' ' + p.name + 'さん ' + p.point + '点';
+  }
+  fanOut(systemMessage(msg));
 }
 
 function changePainter(nextPainterIndex) {

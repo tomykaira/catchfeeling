@@ -136,7 +136,6 @@ function body(name) {
       ctx.stroke();
       break;
     case 'up':
-      ctx.closePath();
       break;
     }
   };
@@ -170,7 +169,6 @@ function body(name) {
     e.preventDefault();
     if (!isMouseDown) return;
     e.preventDefault();
-    ctx.closePath();
     sendPaintEvent('up', {});
     isMouseDown = false;
   }
@@ -232,10 +230,12 @@ function body(name) {
 }
 
 window.addEventListener('load', () => {
-  let name = prompt('Catch Feeling にようこそ!おなまえを入力して入室してください。', '');
+  let name = localStorage['name'];
+  name = prompt('Catch Feeling にようこそ!おなまえを入力して入室してください。', name || '');
   if (name === null ||  name === '') {
     alert('さようなら…');
     return;
   }
+  localStorage['name'] = name;
   body(name);
 });
