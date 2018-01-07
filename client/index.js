@@ -97,12 +97,20 @@ function body(name) {
     const y = height * details['y'];
     ctx[fn](x, y);
   }
-  function translateOrigin(touchEvent) {
+  function translateOrigin(mouseOrTouchEvent) {
     const rect = canvas.getBoundingClientRect();
-    return [
-      (touchEvent.touches[0].clientX - rect.left),
-      (touchEvent.touches[0].clientY - rect.top),
-    ];
+
+    if (mouseOrTouchEvent instanceof TouchEvent) {
+      return [
+        (mouseOrTouchEvent.touches[0].clientX - rect.left),
+        (mouseOrTouchEvent.touches[0].clientY - rect.top),
+      ];
+    } else {
+      return [
+        (mouseOrTouchEvent.clientX - rect.left),
+        (mouseOrTouchEvent.clientY - rect.top),
+      ];
+    }
   }
   function translateToRatio(details) {
     const width = canvas.offsetWidth;
@@ -130,7 +138,8 @@ function body(name) {
     }
   };
   let isMouseDown = false;
-  canvas.addEventListener('touchstart', (e) => {
+
+  function drawStart(e) {
     e.preventDefault();
     if (myRole !== 'painter') { return; }
     let [x, y] = translateOrigin(e);
@@ -141,8 +150,8 @@ function body(name) {
       'x': x,
       'y': y,
     }));
-  });
-  canvas.addEventListener('touchmove', (e) => {
+  }
+  function drawMove(e) {
     e.preventDefault();
     if (!isMouseDown) return;
     let [x, y] = translateOrigin(e);
@@ -153,15 +162,22 @@ function body(name) {
       'x': x,
       'y': y,
     }));
-  });
-  canvas.addEventListener('touchend', (e) => {
+  }
+  function drawEnd(e) {
     e.preventDefault();
     if (!isMouseDown) return;
     e.preventDefault();
     ctx.closePath();
     sendPaintEvent('up', {});
     isMouseDown = false;
-  });
+  }
+
+  canvas.addEventListener('mousedown', drawStart);
+  canvas.addEventListener('mousemove', drawMove);
+  canvas.addEventListener('mouseup', drawEnd);
+  canvas.addEventListener('touchstart', drawStart);
+  canvas.addEventListener('touchmove', drawMove);
+  canvas.addEventListener('touchend', drawEnd);
 
   const history = document.querySelector('#history');
   eventHandlerMap['textMessage'] = (data) => {
