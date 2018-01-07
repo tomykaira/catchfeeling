@@ -2441,6 +2441,10 @@ app.ws('/', (ws, req) => {
           break;
         }
       }
+      if (/^\s*$/.test(decoded.msg)) {
+        // ignore whitespace only messages
+        return;
+      }
       if (answerer === painter) {
         decoded.msg = decoded.msg.replace(new RegExp(currentWord, 'g'), '○○○');
       }
