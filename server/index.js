@@ -2413,10 +2413,14 @@ app.ws('/', (ws, req) => {
         return;
       }
       players.push(new Player(ws, decoded.name));
-      fanOut(systemMessage(decoded.name + 'さんが入室しました'));
-      if (players.length >= kMinPlayerCount) {
+      sendScoreBoard(decoded.name + 'さんが入室しました。');
+      if (players.length < kMinPlayerCount) {
+        fanOut(systemMessage(kMinPlayerCount + '人あつまるまでお待ちください。'));
+      } else if (players.length === kMinPlayerCount) {
         fanOut(systemMessage('最低履行人数があつまりました。ゲームスタート!'));
         changePainter(0);
+      } else {
+        sendOne(ws, systemMessage('次のゲームから参加してください'));
       }
       break;
     case 'textMessage':
@@ -2437,12 +2441,8 @@ app.ws('/', (ws, req) => {
           console.error('Unexpected: no answerer');
           return;
         }
-        let msg = answerer.name + 'さんが正解しました!1ポイント獲得! 現在の得点:';
         answerer.point += 1;
-        for (let p of players) {
-          msg += ' ' + p.name + 'さん ' + p.point + '点';
-        }
-        fanOut(systemMessage(msg));
+        sendScoreBoard(answerer.name + 'さんが正解しました!1ポイント獲得! ');
         changePainter((painterIndex + 1) % players.length);
       }
       break;
@@ -2501,6 +2501,14 @@ function disconnect(ws) {
     fanOut(systemMessage('絵師が退出したため、次のお題に移動します。今のお題は「' + currentWord + '」でした。'));
     changePainter(painterIndex);
   }
+}
+
+function sendScoreBoard(prefix) {
+  let msg = prefix + '現在の得点:';
+  for (let p of players) {
+    msg += ' ' + p.name + 'さん ' + p.point + '点';
+  }
+  fanOut(systemMessage(msg));
 }
 
 function changePainter(nextPainterIndex) {
