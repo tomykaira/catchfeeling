@@ -2508,6 +2508,7 @@ function changePainter(nextPainterIndex) {
   let painter = players[painterIndex];
   let nextWord = selectWord();
   currentWord = nextWord;
+  fanOut({'ev': 'ctrl', 'cmd': 'clear'});
   fanOutOtherThan(painter.ws, systemMessage(painter.name + 'さんが絵を描きます。みんなで当てましょう。'));
   fanOutOtherThan(painter.ws, {'ev': 'ctrl', 'cmd': 'role', 'role': 'answerer'});
   sendOne(painter.ws, systemMessage('あなたが絵師です。お題は「' + nextWord + '」です。絵をかいてください。'));
