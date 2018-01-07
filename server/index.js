@@ -69,12 +69,13 @@ app.ws('/', (ws, req) => {
         let point = Math.round((gameEndTime - Date.now()) / 1000);
         stopGameTimer();
 
-        let msg = answerer.name + 'さんが正解しました!' + point + 'ポイント獲得! 現在の得点:';
+        let msg = '現在の得点:';
         answerer.point += point;
         for (let p of players) {
           msg += ' ' + p.name + 'さん ' + p.point + '点';
         }
         fanOut(endTimer());
+        fanOut(systemMessage(answerer.name + ' が正解！「' + currentWord+ '」+ ' + point + '点'));
         fanOut(systemMessage(msg));
         fanOut(audio('ok'));
         waitChangePainter((painterIndex + 1) % players.length);
@@ -148,10 +149,14 @@ function changePainter(nextPainterIndex) {
   let painter = players[painterIndex];
   let nextWord = selectWord();
   currentWord = nextWord;
-  fanOutOtherThan(painter.ws, systemMessage(painter.name + 'さんが絵を描きます。みんなで当てましょう。'));
+
   fanOutOtherThan(painter.ws, {'ev': 'ctrl', 'cmd': 'role', 'role': 'answerer'});
-  sendOne(painter.ws, systemMessage('あなたが絵師です。お題は「' + nextWord + '」です。絵をかいてください。'));
   sendOne(painter.ws, {'ev': 'ctrl', 'cmd': 'role', 'role': 'painter'});
+  fanOut(systemMessage(painter.name + ' の番です！絵を描いてください（お題の文字を書いてはいけません）'));
+  fanOut(systemMessage('他の人は ' + painter.name + ' の描いた絵をひらがなで発言してください'));
+  sendOne(painter.ws, systemMessage('お題: ' + nextWord));
+
+  fanOut(startTimer(gameTimeout));
   startGameTimer();
   fanOut(startTimer(gameTimeout));
   fanOut(audio('question'));
