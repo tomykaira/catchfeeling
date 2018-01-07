@@ -18,6 +18,7 @@ const dictionary = [
 const recentlySelectedWords = [];
 let painterIndex = -1;
 let currentWord = null;
+let gameEndTime = null;
 let gameTimeoutObserver = null;
 
 app.use(express.static(__dirname + '/../client'));
@@ -65,10 +66,11 @@ app.ws('/', (ws, req) => {
           console.error('Unexpected: no answerer');
           return;
         }
+        let point = Math.round((gameEndTime - Date.now()) / 1000);
         stopGameTimer();
 
-        let msg = answerer.name + 'さんが正解しました!1ポイント獲得! 現在の得点:';
-        answerer.point += 1;
+        let msg = answerer.name + 'さんが正解しました!' + point + 'ポイント獲得! 現在の得点:';
+        answerer.point += point;
         for (let p of players) {
           msg += ' ' + p.name + 'さん ' + p.point + '点';
         }
@@ -174,6 +176,8 @@ function selectWord() {
 
 function startGameTimer() {
   stopGameTimer();
+
+  gameEndTime = Date.now() + gameTimeout;
   gameTimeoutObserver = setTimeout(() => {
     stopGameTimer();
     endGameByTimeLimit();
