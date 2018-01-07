@@ -225,7 +225,7 @@ function body(name) {
   eventHandlerMap['audio'] = (data) => {
     var audio = document.getElementById('audio_' + data.id);
     audio.play();
-  }
+  };
 }
 
 window.addEventListener('load', () => {
