@@ -6,6 +6,10 @@ const WebSocket = require('ws');
 const expressWs = require('express-ws')(app);
 
 const kMinPlayerCount = 2;
+const gameTimeout = 120 * 1000;
+const revealLengthTime = 30 * 1000;
+const revealPrefixTime = 60 * 1000;
+const revealSuffixTime = 90 * 1000;
 const players = [];
 // Use only ひらがな
 const dictionary = [
@@ -2390,6 +2394,11 @@ const dictionary = [
 const recentlySelectedWords = [];
 let painterIndex = -1;
 let currentWord = null;
+let gameEndTime = null;
+let gameTimeoutObserver = null;
+let revealLengthTimeouter = null;
+let revealPrefixTimeouter = null;
+let revealSuffixTimeouter = null;
 
 app.use(express.static(__dirname + '/../client'));
 
@@ -2413,37 +2422,45 @@ app.ws('/', (ws, req) => {
         return;
       }
       players.push(new Player(ws, decoded.name));
-      sendScoreBoard(decoded.name + 'さんが入室しました。');
+      sendScoreBoard(decoded.name + 'さんが入室しました');
       if (players.length < kMinPlayerCount) {
         fanOut(systemMessage(kMinPlayerCount + '人あつまるまでお待ちください。'));
       } else if (players.length === kMinPlayerCount) {
-        fanOut(systemMessage('最低履行人数があつまりました。ゲームスタート!'));
-        changePainter(0);
+        fanOut(systemMessage('最低履行人数があつまりました。'));
+        waitChangePainter(0);
       } else {
         sendOne(ws, systemMessage('次のゲームから参加してください'));
       }
       break;
     case 'textMessage':
       let answerer = null;
+      let painter = (painterIndex !== null && painterIndex >= 0) ? players[painterIndex] : null;
       for (let p of players) {
         if (p.ws === ws) {
           answerer = p;
           break;
         }
       }
-      if (/^「.*」$/.test(decoded.msg) && answerer === players[painterIndex])  {
-        sendOne(ws, error('絵師は「」つき発言をできません。'));
-        return;
+      if (answerer === painter) {
+        decoded.msg = decoded.msg.replace(new RegExp(currentWord, 'g'), '○○○');
       }
       fanOut(decoded);
-      if (decoded.msg === '「' + currentWord + '」') {
+      if (answerer !== painter && decoded.msg === currentWord) {
         if (answerer === null) {
           console.error('Unexpected: no answerer');
           return;
         }
-        answerer.point += 1;
-        sendScoreBoard(answerer.name + 'さんが正解しました!1ポイント獲得! ');
-        changePainter((painterIndex + 1) % players.length);
+        let point = Math.round((gameEndTime - Date.now()) / 1000);
+        stopGameTimer();
+        stopRevealer();
+
+        fanOut(endTimer());
+        fanOut(setSubject(currentWord));
+        fanOut(systemMessage(answerer.name + ' が正解！「' + currentWord + '」+ ' + point + '点'));
+        fanOut(systemMessage('絵を描いた人 ' + painter.name + ' + ' + point + '点'));
+        fanOut(sendScoreBoard(''));
+        fanOut(audio('ok'));
+        waitChangePainter((painterIndex + 1) % players.length);
       }
       break;
     case 'paintEvent':
@@ -2498,9 +2515,17 @@ function disconnect(ws) {
   let disconnectedPlayer = players.splice(i, 1)[0];
   fanOut(systemMessage(disconnectedPlayer.name + 'さんが退出しました。'));
   if (i === painterIndex) {
+    stopRevealer();
+
     fanOut(systemMessage('絵師が退出したため、次のお題に移動します。今のお題は「' + currentWord + '」でした。'));
-    changePainter(painterIndex);
+    fanOut(endTimer());
+    waitChangePainter(painterIndex);
   }
+}
+
+function waitChangePainter(nextPainterIndex) {
+  fanOut(systemMessage('5秒後に次のゲームが始まります'));
+  setTimeout(() => { changePainter(nextPainterIndex); }, 5000);
 }
 
 function sendScoreBoard(prefix) {
@@ -2516,11 +2541,22 @@ function changePainter(nextPainterIndex) {
   let painter = players[painterIndex];
   let nextWord = selectWord();
   currentWord = nextWord;
+
   fanOut({'ev': 'ctrl', 'cmd': 'clear'});
-  fanOutOtherThan(painter.ws, systemMessage(painter.name + 'さんが絵を描きます。みんなで当てましょう。'));
   fanOutOtherThan(painter.ws, {'ev': 'ctrl', 'cmd': 'role', 'role': 'answerer'});
-  sendOne(painter.ws, systemMessage('あなたが絵師です。お題は「' + nextWord + '」です。絵をかいてください。'));
   sendOne(painter.ws, {'ev': 'ctrl', 'cmd': 'role', 'role': 'painter'});
+  fanOut(systemMessage(painter.name + ' の番です！絵を描いてください（お題の文字を書いてはいけません）'));
+  fanOut(systemMessage('他の人は ' + painter.name + ' の描いた絵をひらがなで発言してください'));
+
+  sendOne(painter.ws, setSubject(nextWord));
+  fanOutOtherThan(painter.ws, setSubject('？？？'));
+  sendOne(painter.ws, systemMessage('お題: ' + nextWord));
+
+  fanOut(startTimer(gameTimeout));
+  startGameTimer();
+  startRevealer();
+  fanOut(startTimer(gameTimeout));
+  fanOut(audio('question'));
 }
 
 function selectWord() {
@@ -2538,6 +2574,77 @@ function selectWord() {
       return word;
     }
   }
+}
+
+function startGameTimer() {
+  stopGameTimer();
+
+  gameEndTime = Date.now() + gameTimeout;
+  gameTimeoutObserver = setTimeout(() => {
+    stopGameTimer();
+    endGameByTimeLimit();
+  }, gameTimeout);
+}
+
+function stopGameTimer() {
+  if (gameTimeoutObserver !== null) {
+    clearTimeout(gameTimeoutObserver);
+    gameTimeoutObserver = null;
+  }
+}
+
+function startRevealer() {
+  stopRevealer();
+
+  revealLengthTimeouter = setTimeout(() => {
+    fanOutOtherThan(players[painterIndex].ws, setSubject('○'.repeat(currentWord.length)));
+  }, revealLengthTime);
+
+  revealPrefixTimeouter = setTimeout(() => {
+    let revealLength = currentWord.length >= 10 ? 2 : 1;
+    let revealedSubject = currentWord.substr(0, revealLength) + '○'.repeat(currentWord.length - revealLength);
+    fanOutOtherThan(players[painterIndex].ws, setSubject(revealedSubject));
+  }, revealPrefixTime);
+
+  revealSuffixTimeouter = setTimeout(() => {
+    var revealLength;
+    if (currentWord.length >= 10) {
+      revealLength = 2;
+    } else if (currentWord.length >= 3) {
+      revealLength = 1;
+    } else {
+      revealLength = 0;
+    }
+    let revealedSubject =
+      currentWord.substr(0, revealLength) +
+      '○'.repeat(currentWord.length - (2 * revealLength)) +
+      currentWord.substr(-revealLength, revealLength);
+    fanOutOtherThan(players[painterIndex].ws, setSubject(revealedSubject));
+  }, revealSuffixTime);
+}
+
+function stopRevealer() {
+  if (revealLengthTimeouter !== null) {
+    clearTimeout(revealLengthTimeouter);
+    revealLengthTimeouter = null;
+  }
+  if (revealPrefixTimeouter !== null) {
+    clearTimeout(revealPrefixTimeouter);
+    revealPrefixTimeouter = null;
+  }
+  if (revealSuffixTimeouter !== null) {
+    clearTimeout(revealSuffixTimeouter);
+    revealSuffixTimeouter = null;
+  }
+}
+
+function endGameByTimeLimit() {
+  fanOut(endTimer());
+  fanOut(systemMessage('時間切れ！正解者は居ませんでした 「' + currentWord + '」'));
+  fanOut(audio('ng'));
+
+  currentWord = null;
+  waitChangePainter((painterIndex + 1) % players.length);
 }
 
 function cleanUpRecentlySelectedWords() {
@@ -2558,6 +2665,22 @@ function error(msg) {
 
 function systemMessage(msg) {
   return {'ev': 'textMessage', 'name': 'SYSTEM', 'msg': msg};
+}
+
+function setSubject(subject) {
+  return {'ev': 'setSubject', 'subject': subject};
+}
+
+function startTimer(timeLimit) {
+  return {'ev': 'startTimer', 'timeLimit': timeLimit};
+}
+
+function endTimer() {
+  return {'ev': 'endTimer'};
+}
+
+function audio(id) {
+  return {'ev': 'audio', 'id': id};
 }
 
 function fanOut(msg) {

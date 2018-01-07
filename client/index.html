@@ -1,10 +1,19 @@
 <html>
   <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <script src="/index.js"></script>
     <link rel="stylesheet" type="text/css" href="/index.css">
   </head>
+
   <div id="main">
+    <div id="subject-container">
+      お題: <div id="subject">-</div>
+    </div>
+    <div id="time-container">
+      残り時間: <div id="time">-</div>
+    </div>
+
     <div class="left-pane">
       <canvas id="canvas"></canvas>
     </div>
@@ -21,4 +30,8 @@
       </div>
     </div>
   </div>
+
+  <audio id="audio_question" src="coin03.mp3"></audio>
+  <audio id="audio_ok" src="crrect_answer3.mp3"></audio>
+  <audio id="audio_ng" src="blip01.mp3"></audio>
 </html>
