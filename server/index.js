@@ -54,12 +54,11 @@ app.ws('/', (ws, req) => {
           break;
         }
       }
-      if (/^「.*」$/.test(decoded.msg) && answerer === players[painterIndex])  {
-        sendOne(ws, error('絵師は「」つき発言をできません。'));
-        return;
+      if (answerer === players[painterIndex]) {
+        decoded.msg = decoded.msg.replace(currentWord, '○○○');
       }
       fanOut(decoded);
-      if (decoded.msg === '「' + currentWord + '」') {
+      if (answerer !== players[painterIndex] && decoded.msg === currentWord) {
         if (answerer === null) {
           console.error('Unexpected: no answerer');
           return;
