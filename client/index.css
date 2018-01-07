@@ -2,6 +2,11 @@ body {
     background: #feffef;
 }
 
+#main {
+    max-width: 1024px;
+    margin: 0 auto;
+}
+
 .left-pane {
     width: 100%;
     padding-top: 75%;
