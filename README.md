@@ -8,4 +8,6 @@ MIT License.
 
 # Sound credits
 - [http://taira-komori.jpn.org/freesound.html](http://taira-komori.jpn.org/freesound.html)
+    - coin03.mp3
     - crrect_answer3.mp3
+    - blip01.mp3
