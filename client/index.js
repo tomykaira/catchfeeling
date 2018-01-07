@@ -93,6 +93,8 @@ function body(name) {
   ctx.scale(dpr, dpr);
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#000000';
+  const initialWidth = canvas.clientWidth;
+  const initialHeight = canvas.clientHeight;
   function translateFromRatio(fn, details) {
     const width = canvas.offsetWidth;
     const height = canvas.offsetHeight;
@@ -102,16 +104,18 @@ function body(name) {
   }
   function translateOrigin(mouseOrTouchEvent) {
     const rect = canvas.getBoundingClientRect();
+    const scaleWidth = initialWidth / canvas.offsetWidth;
+    const scaleHeight = initialHeight / canvas.offsetHeight;
 
     if (mouseOrTouchEvent instanceof TouchEvent) {
       return [
-        (mouseOrTouchEvent.touches[0].clientX - rect.left),
-        (mouseOrTouchEvent.touches[0].clientY - rect.top),
+        (mouseOrTouchEvent.touches[0].clientX - rect.left) * scaleWidth,
+        (mouseOrTouchEvent.touches[0].clientY - rect.top) * scaleHeight
       ];
     } else {
       return [
-        (mouseOrTouchEvent.clientX - rect.left),
-        (mouseOrTouchEvent.clientY - rect.top),
+        (mouseOrTouchEvent.clientX - rect.left) * scaleWidth,
+        (mouseOrTouchEvent.clientY - rect.top) * scaleHeight,
       ];
     }
   }
