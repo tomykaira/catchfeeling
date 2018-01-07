@@ -2434,17 +2434,18 @@ app.ws('/', (ws, req) => {
       break;
     case 'textMessage':
       let answerer = null;
+      let painter = (painterIndex !== null && painterIndex >= 0) ? players[painterIndex] : null;
       for (let p of players) {
         if (p.ws === ws) {
           answerer = p;
           break;
         }
       }
-      if (answerer === players[painterIndex]) {
-        decoded.msg = decoded.msg.replace(currentWord, '○○○');
+      if (answerer === painter) {
+        decoded.msg = decoded.msg.replace(new RegExp(currentWord, 'g'), '○○○');
       }
       fanOut(decoded);
-      if (answerer !== players[painterIndex] && decoded.msg === currentWord) {
+      if (answerer !== painter && decoded.msg === currentWord) {
         if (answerer === null) {
           console.error('Unexpected: no answerer');
           return;
@@ -2456,7 +2457,7 @@ app.ws('/', (ws, req) => {
         fanOut(endTimer());
         fanOut(setSubject(currentWord));
         fanOut(systemMessage(answerer.name + ' が正解！「' + currentWord + '」+ ' + point + '点'));
-        fanOut(systemMessage('絵を描いた人 ' + answerer.name + ' + ' + point + '点'));
+        fanOut(systemMessage('絵を描いた人 ' + painter.name + ' + ' + point + '点'));
         fanOut(sendScoreBoard(''));
         fanOut(audio('ok'));
         waitChangePainter((painterIndex + 1) % players.length);
