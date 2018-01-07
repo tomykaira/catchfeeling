@@ -2454,6 +2454,9 @@ app.ws('/', (ws, req) => {
         stopGameTimer();
         stopRevealer();
 
+        answerer.point += point;
+        painter.point += point;
+
         fanOut(endTimer());
         fanOut(setSubject(currentWord));
         fanOut(systemMessage(answerer.name + ' が正解！「' + currentWord + '」+ ' + point + '点'));
