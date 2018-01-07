@@ -37,6 +37,9 @@ function body(name) {
 
   eventHandlerMap['ctrl'] = (msg) => {
     switch (msg['cmd']) {
+      case 'clear':
+        ctx.clearRect(0, 0, 10000000, 10000000);
+        break;
       case 'role':
         myRole = msg['role'];
         break;
