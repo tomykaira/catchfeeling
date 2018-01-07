@@ -195,6 +195,11 @@ function body(name) {
     history.insertBefore(li, history.firstChild);
   };
 
+  const subjectElement = document.querySelector('#subject');
+  eventHandlerMap['setSubject'] = (data) => {
+    subjectElement.innerText = data.subject;
+  };
+
   const timeElement = document.querySelector('#time');
   var countDownTimer = null;
   var countDownEndTime = null;
