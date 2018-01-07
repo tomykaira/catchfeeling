@@ -70,6 +70,7 @@ app.ws('/', (ws, req) => {
           msg += ' ' + p.name + 'さん ' + p.point + '点';
         }
         fanOut(systemMessage(msg));
+        fanOut(audio('ok'));
         changePainter((painterIndex + 1) % players.length);
       }
       break;
@@ -176,6 +177,10 @@ function error(msg) {
 
 function systemMessage(msg) {
   return {'ev': 'textMessage', 'name': 'SYSTEM', 'msg': msg};
+}
+
+function audio(id) {
+  return {'ev': 'audio', 'id': id};
 }
 
 function fanOut(msg) {

@@ -5,3 +5,7 @@ For this project, check [Docs](https://docs.google.com/document/d/1WeHReZvfFfWXU
 # License
 
 MIT License.
+
+# Sound credits
+- [http://taira-komori.jpn.org/freesound.html](http://taira-komori.jpn.org/freesound.html)
+    - crrect_answer3.mp3

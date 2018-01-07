@@ -194,6 +194,11 @@ function body(name) {
     li.appendChild(textSpan);
     history.insertBefore(li, history.firstChild);
   };
+
+  eventHandlerMap['audio'] = (data) => {
+    var audio = document.getElementById('audio_' + data.id);
+    audio.play();
+  }
 }
 
 window.addEventListener('load', () => {
