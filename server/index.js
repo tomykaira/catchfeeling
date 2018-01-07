@@ -2441,6 +2441,10 @@ app.ws('/', (ws, req) => {
           break;
         }
       }
+      if (/^\s*$/.test(decoded.msg)) {
+        // ignore whitespace only messages
+        return;
+      }
       if (answerer === painter) {
         decoded.msg = decoded.msg.replace(new RegExp(currentWord, 'g'), '○○○');
       }
@@ -2453,6 +2457,9 @@ app.ws('/', (ws, req) => {
         let point = Math.round((gameEndTime - Date.now()) / 1000);
         stopGameTimer();
         stopRevealer();
+
+        answerer.point += point;
+        painter.point += point;
 
         fanOut(endTimer());
         fanOut(setSubject(currentWord));
