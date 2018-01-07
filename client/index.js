@@ -202,17 +202,16 @@ function body(name) {
   };
 
   const timeElement = document.querySelector('#time');
-  var countDownTimer = null;
-  var countDownEndTime = null;
+  let countDownTimer = null;
   eventHandlerMap['startTimer'] = (data) => {
     if (countDownTimer !== null) {
       clearInterval(countDownTimer);
       countDownTimer = null;
     }
 
-    countDownEndTime = (new Date()).getTime() + data.timeLimit;
+    let countDownEndTime = Date.now() + data.timeLimit;
     countDownTimer = setInterval(() => {
-      timeElement.innerText = Math.floor((countDownEndTime - (new Date()).getTime()) / 1000);
+      timeElement.innerText = Math.floor((countDownEndTime - Date.now()) / 1000);
     }, 1000);
   };
 
