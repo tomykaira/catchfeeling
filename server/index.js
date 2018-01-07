@@ -7,6 +7,9 @@ const expressWs = require('express-ws')(app);
 
 const kMinPlayerCount = 2;
 const gameTimeout = 120 * 1000;
+const revealLengthTime = 30 * 1000;
+const revealPrefixTime = 60 * 1000;
+const revealSuffixTime = 90 * 1000;
 const players = [];
 // Use only ひらがな
 const dictionary = [
@@ -2393,6 +2396,9 @@ let painterIndex = -1;
 let currentWord = null;
 let gameEndTime = null;
 let gameTimeoutObserver = null;
+let revealLengthTimeouter = null;
+let revealPrefixTimeouter = null;
+let revealSuffixTimeouter = null;
 
 app.use(express.static(__dirname + '/../client'));
 
@@ -2445,6 +2451,7 @@ app.ws('/', (ws, req) => {
         }
         let point = Math.round((gameEndTime - Date.now()) / 1000);
         stopGameTimer();
+        stopRevealer();
 
         fanOut(endTimer());
         fanOut(setSubject(currentWord));
@@ -2507,6 +2514,8 @@ function disconnect(ws) {
   let disconnectedPlayer = players.splice(i, 1)[0];
   fanOut(systemMessage(disconnectedPlayer.name + 'さんが退出しました。'));
   if (i === painterIndex) {
+    stopRevealer();
+
     fanOut(systemMessage('絵師が退出したため、次のお題に移動します。今のお題は「' + currentWord + '」でした。'));
     fanOut(endTimer());
     waitChangePainter(painterIndex);
@@ -2544,6 +2553,7 @@ function changePainter(nextPainterIndex) {
 
   fanOut(startTimer(gameTimeout));
   startGameTimer();
+  startRevealer();
   fanOut(startTimer(gameTimeout));
   fanOut(audio('question'));
 }
@@ -2579,6 +2589,51 @@ function stopGameTimer() {
   if (gameTimeoutObserver !== null) {
     clearTimeout(gameTimeoutObserver);
     gameTimeoutObserver = null;
+  }
+}
+
+function startRevealer() {
+  stopRevealer();
+
+  revealLengthTimeouter = setTimeout(() => {
+    fanOutOtherThan(players[painterIndex].ws, setSubject('○'.repeat(currentWord.length)));
+  }, revealLengthTime);
+
+  revealPrefixTimeouter = setTimeout(() => {
+    let revealLength = currentWord.length >= 10 ? 2 : 1;
+    let revealedSubject = currentWord.substr(0, revealLength) + '○'.repeat(currentWord.length - revealLength);
+    fanOutOtherThan(players[painterIndex].ws, setSubject(revealedSubject));
+  }, revealPrefixTime);
+
+  revealSuffixTimeouter = setTimeout(() => {
+    var revealLength;
+    if (currentWord.length >= 10) {
+      revealLength = 2;
+    } else if (currentWord.length >= 3) {
+      revealLength = 1;
+    } else {
+      revealLength = 0;
+    }
+    let revealedSubject =
+      currentWord.substr(0, revealLength) +
+      '○'.repeat(currentWord.length - (2 * revealLength)) +
+      currentWord.substr(-revealLength, revealLength);
+    fanOutOtherThan(players[painterIndex].ws, setSubject(revealedSubject));
+  }, revealSuffixTime);
+}
+
+function stopRevealer() {
+  if (revealLengthTimeouter !== null) {
+    clearTimeout(revealLengthTimeouter);
+    revealLengthTimeouter = null;
+  }
+  if (revealPrefixTimeouter !== null) {
+    clearTimeout(revealPrefixTimeouter);
+    revealPrefixTimeouter = null;
+  }
+  if (revealSuffixTimeouter !== null) {
+    clearTimeout(revealSuffixTimeouter);
+    revealSuffixTimeouter = null;
   }
 }
 
