@@ -5,6 +5,10 @@
     <script src="/index.js"></script>
     <link rel="stylesheet" type="text/css" href="/index.css">
   </head>
+  <div id="time-wrapper">
+    残り時間: <div id="time">-</div>
+  </div>
+
   <div id="main">
     <div class="left-pane">
       <canvas id="canvas"></canvas>
@@ -23,5 +27,7 @@
     </div>
   </div>
 
+  <audio id="audio_question" src="coin03.mp3"></audio>
   <audio id="audio_ok" src="crrect_answer3.mp3"></audio>
+  <audio id="audio_ng" src="blip01.mp3"></audio>
 </html>

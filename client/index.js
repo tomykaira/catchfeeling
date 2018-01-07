@@ -195,6 +195,28 @@ function body(name) {
     history.insertBefore(li, history.firstChild);
   };
 
+  const timeElement = document.querySelector('#time');
+  var countDownTimer = null;
+  var countDownEndTime = null;
+  eventHandlerMap['startTimer'] = (data) => {
+    if (countDownTimer !== null) {
+      clearInterval(countDownTimer);
+      countDownTimer = null;
+    }
+
+    countDownEndTime = (new Date()).getTime() + data.timeLimit;
+    countDownTimer = setInterval(() => {
+      timeElement.innerText = Math.floor((countDownEndTime - (new Date()).getTime()) / 1000);
+    }, 1000);
+  };
+
+  eventHandlerMap['endTimer'] = (data) => {
+    if (countDownTimer !== null) {
+      clearInterval(countDownTimer);
+      countDownTimer = null;
+    }
+  };
+
   eventHandlerMap['audio'] = (data) => {
     var audio = document.getElementById('audio_' + data.id);
     audio.play();
